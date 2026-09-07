@@ -35,7 +35,7 @@
 		async getRoom(code) {
 			const { ref, get, db } = await getFirebase()
 			const snap = await get(ref(db, `rooms/${code}`))
-			return snap.exists() ? snap.val() : null
+			return snap.exists() ? window.GameLogic.normalizeRoom(snap.val()) : null
 		},
 		subscribeRoom(code, cb) {
 			let unsub = () => {}
@@ -43,7 +43,7 @@
 			getFirebase().then(({ ref, onValue, db }) => {
 				if (cancelled) return
 				const r = ref(db, `rooms/${code}`)
-				unsub = onValue(r, (snap) => cb(snap.exists() ? snap.val() : null))
+				unsub = onValue(r, (snap) => cb(snap.exists() ? window.GameLogic.normalizeRoom(snap.val()) : null))
 			})
 			return () => {
 				cancelled = true
@@ -54,6 +54,7 @@
 			const { ref, runTransaction, db } = await getFirebase()
 			const result = await runTransaction(ref(db, `rooms/${code}`), (room) => {
 				if (room === null || room === undefined) return room
+				window.GameLogic.normalizeRoom(room)
 				return mutator(room) || room
 			})
 			return result.committed ? result.snapshot.val() : null

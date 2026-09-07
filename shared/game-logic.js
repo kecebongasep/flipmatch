@@ -40,6 +40,18 @@
 		return !!cardA && !!cardB && cardA.type !== cardB.type && cardA.value === cardB.value
 	}
 
+	// Firebase Realtime Database menghapus object/array kosong ({}/[]) saat disimpan.
+	// Room yang baru dibuat punya players/groups/boards berupa {} kosong, sehingga
+	// setelah tersimpan & terbaca ulang dari Firebase, properti ini bisa hilang (undefined).
+	// Fungsi ini memastikan ketiganya selalu berupa object sebelum dipakai.
+	function normalizeRoom(room) {
+		if (!room) return room
+		if (!room.players) room.players = {}
+		if (!room.groups) room.groups = {}
+		if (!room.boards) room.boards = {}
+		return room
+	}
+
 	function createRoom({ title, pairs, duration, mode, groupSize }) {
 		return {
 			code: genRoomCode(),
@@ -58,6 +70,7 @@
 	}
 
 	function addPlayer(room, name) {
+		normalizeRoom(room)
 		const id = genId('p')
 		const player = {
 			id,
@@ -94,6 +107,7 @@
 	}
 
 	function startRoom(room) {
+		normalizeRoom(room)
 		room.status = 'playing'
 		room.startedAt = Date.now()
 		if (room.mode === 'group') {
@@ -120,6 +134,7 @@
 	}
 
 	function getEntity(room, entityId) {
+		normalizeRoom(room)
 		return room.mode === 'group' ? room.groups[entityId] : room.boards[entityId]
 	}
 
@@ -172,6 +187,7 @@
 	}
 
 	function leaderboard(room) {
+		normalizeRoom(room)
 		const entities = room.mode === 'group' ? Object.values(room.groups) : Object.values(room.boards)
 		return entities
 			.map((e) => {
@@ -201,6 +217,7 @@
 		buildDeck,
 		checkMatch,
 		createRoom,
+		normalizeRoom,
 		addPlayer,
 		startRoom,
 		getEntity,
