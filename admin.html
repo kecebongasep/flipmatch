@@ -12,9 +12,11 @@
   <span class="tag">Admin</span>
 </header>
 <main class="container">
+
   <section id="setupPanel" class="card-section">
     <h2>1. Buat soal &amp; pengaturan</h2>
     <p class="hint">Isi judul, durasi, soal-jawaban, lalu pilih mode permainan sebelum membuat room.</p>
+
     <div class="field-row">
       <label>Judul permainan
         <input id="gameTitle" value="Tantangan Matematika" maxlength="60">
@@ -23,18 +25,21 @@
         <input id="duration" type="number" min="15" max="3600" value="120">
       </label>
     </div>
+
     <label style="margin-bottom:16px">Mode permainan
       <div class="radio-group" id="modeGroup">
         <label class="radio-chip checked"><input type="radio" name="mode" value="individual" checked> Mandiri (tiap orang main sendiri)</label>
         <label class="radio-chip"><input type="radio" name="mode" value="group"> Grup (bergiliran satu papan)</label>
       </div>
     </label>
+
     <div class="field-row" id="groupSizeWrap" hidden>
       <label>Jumlah orang per grup
         <input id="groupSize" type="number" min="2" max="8" value="2">
       </label>
       <div></div>
     </div>
+
     <div class="panel-heading" style="margin-top:22px">
       <div><span class="step">2</span><h2 style="margin:0">Soal &amp; jawaban</h2></div>
       <div class="header-actions">
@@ -46,10 +51,12 @@
     <div class="pair-labels"><span>Soal</span><span>Jawaban</span><span></span></div>
     <div class="pair-list" id="pairList"></div>
     <p id="setupError" class="inline-error" hidden></p>
+
     <div class="actions">
       <button id="createRoomBtn" class="btn primary large" type="button">Buat Room</button>
     </div>
   </section>
+
   <section id="lobbyPanel" class="card-section" hidden>
     <h2>Room dibuat — menunggu pemain</h2>
     <p class="hint">Bagikan kode atau link berikut ke pemain. Mereka bisa gabung dari laptop masing-masing.</p>
@@ -68,6 +75,7 @@
       <button id="startRoomBtn" class="btn primary large" type="button" disabled>Mulai Permainan</button>
     </div>
   </section>
+
   <section id="monitorPanel" class="card-section" hidden>
     <div class="monitor-top">
       <h2 style="margin:0">Permainan berlangsung</h2>
@@ -84,6 +92,7 @@
       <button id="newRoomBtn" class="btn primary large" type="button">Buat Room Baru</button>
     </div>
   </section>
+
 </main>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script src="firebase-config.js"></script>
