@@ -46,6 +46,7 @@ button:focus-visible,input:focus-visible{outline:3px solid rgba(124,92,255,.3);o
 .tag{padding:6px 12px;border-radius:99px;background:var(--grad-warm);color:#fff;font-size:12px;font-weight:800;letter-spacing:.02em;box-shadow:0 4px 10px rgba(255,111,165,.35)}
 
 .container{max-width:900px;margin:0 auto;padding:36px 20px 80px;position:relative}
+main.container:has(#playPanel:not([hidden])){max-width:1180px}
 
 /* ---------- Card sections ---------- */
 .card-section{
@@ -142,6 +143,17 @@ input:focus{border-color:var(--violet);box-shadow:0 0 0 4px rgba(124,92,255,.14)
 .monitor-members{margin-top:6px;font-size:12px;color:var(--muted)}
 .done-badge{display:inline-block;margin-top:6px;padding:3px 10px;background:var(--green);color:#fff;border-radius:99px;font-size:11px;font-weight:800}
 
+/* ---------- Pairing turnamen ---------- */
+.pairing-pool{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:16px}
+.pairing-chip{padding:10px 15px;border:1.5px solid #e2defa;border-radius:11px;background:#fbfaff;color:var(--ink);font-size:13px;font-weight:700;cursor:pointer;transition:.15s}
+.pairing-chip:hover{border-color:var(--violet)}
+.pairing-chip.selected{border-color:transparent;background:var(--grad-main);color:#fff;box-shadow:0 6px 14px rgba(124,92,255,.32)}
+.pairing-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.pairing-list{display:flex;flex-direction:column;gap:9px}
+.pairing-row{display:flex;align-items:center;justify-content:space-between;padding:12px 15px;background:var(--soft);border:1px solid var(--line);border-radius:12px;font-size:14px;font-weight:650;color:var(--ink)}
+
+.champion-banner{padding:16px 20px;margin-bottom:16px;border-radius:14px;background:linear-gradient(135deg,#ffe6b0,#ffd1e6);color:#7a4a12;font-size:16px;font-weight:800;text-align:center;box-shadow:0 8px 20px rgba(255,180,60,.25)}
+
 table.leaderboard{width:100%;border-collapse:separate;border-spacing:0 6px;margin-bottom:6px}
 table.leaderboard th{text-align:left;padding:6px 12px;font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.03em}
 table.leaderboard td{padding:13px 12px;font-size:14px;background:#fbfaff;color:var(--ink)}
@@ -178,7 +190,9 @@ table.leaderboard tr td:last-child{border-radius:0 10px 10px 0}
 .turn-indicator{margin-bottom:14px;padding:11px 16px;border-radius:12px;background:var(--blue-soft);color:var(--blue);font-size:14px;font-weight:750}
 .turn-indicator.mine{background:var(--green-soft);color:var(--green)}
 
-.card-grid{display:grid;grid-template-columns:repeat(var(--grid-cols,4),minmax(0,1fr));gap:11px;max-width:640px;margin:0 auto}
+#bracketRoundLabel{margin:0 0 14px;padding:10px 16px;border-radius:11px;background:var(--blue-soft);color:var(--blue);font-size:14px;font-weight:750;display:inline-block}
+
+.card-grid{display:grid;grid-template-columns:repeat(var(--grid-cols,4),minmax(0,1fr));gap:11px;max-width:100%;margin:0 auto}
 .memory-card{position:relative;aspect-ratio:3/4;min-height:0;padding:0;border:0;background:transparent;perspective:900px;cursor:pointer}
 .memory-card:disabled{cursor:default}
 .card-inner{position:absolute;inset:0;transition:transform .42s cubic-bezier(.2,.8,.3,1.1);transform-style:preserve-3d}
@@ -209,7 +223,6 @@ table.leaderboard tr td:last-child{border-radius:0 10px 10px 0}
 @media(max-width:640px){
   .field-row{grid-template-columns:1fr}
   .pair-labels,.pair-row{grid-template-columns:1fr 1fr 36px}
-  .card-grid{grid-template-columns:repeat(min(var(--grid-cols,4),3),minmax(0,1fr))}
   .game-header{flex-direction:column;align-items:flex-start}
   .card-section{padding:24px 18px}
 }

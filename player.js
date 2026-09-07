@@ -53,12 +53,44 @@ const urlCode = new URLSearchParams(location.search).get('code')
 if (urlCode) $('#codeInput').value = urlCode.toUpperCase()
 
 function fitGrid(n) {
-	const w = innerWidth
-	let cols
-	if (w <= 560) cols = n <= 12 ? 3 : n <= 20 ? 4 : 5
-	else if (w <= 850) cols = n <= 12 ? 4 : n <= 24 ? 5 : 6
-	else cols = n <= 12 ? 4 : n <= 20 ? 5 : n <= 30 ? 6 : 8
-	$('#cardGrid').style.setProperty('--grid-cols', cols)
+	const grid = $('#cardGrid')
+	const panel = $('#playPanel')
+	if (!grid || !panel || panel.hidden) return
+	const gap = 11
+	const availW = grid.clientWidth || panel.clientWidth || innerWidth
+	// Hitung tinggi yang sudah dipakai elemen lain di dalam panel (judul, stats, progress bar, dll)
+	// supaya grid kartu pas mengisi sisa tinggi layar tanpa perlu scroll.
+	let usedHeight = 0
+	for (const el of panel.children) {
+		if (el.id !== 'cardGrid' && !el.hidden) usedHeight += el.offsetHeight
+	}
+	const top = panel.getBoundingClientRect().top
+	const availH = Math.max(220, innerHeight - top - usedHeight - 56)
+	let bestCols = 1
+	let bestSize = 0
+	for (let cols = 1; cols <= n; cols++) {
+		const rows = Math.ceil(n / cols)
+		const cardW = (availW - gap * (cols - 1)) / cols
+		if (cardW <= 0) continue
+		const cardH = (cardW * 4) / 3
+		const totalH = cardH * rows + gap * (rows - 1)
+		if (totalH <= availH && cardW > bestSize) {
+			bestSize = cardW
+			bestCols = cols
+		}
+	}
+	if (bestSize === 0) {
+		// Tidak ada susunan yang muat penuh secara tinggi (kartu sangat banyak di layar kecil);
+		// pilih kolom dengan kartu terbesar berdasarkan lebar saja supaya tetap proporsional.
+		for (let cols = 1; cols <= n; cols++) {
+			const cardW = (availW - gap * (cols - 1)) / cols
+			if (cardW > bestSize) {
+				bestSize = cardW
+				bestCols = cols
+			}
+		}
+	}
+	grid.style.setProperty('--grid-cols', bestCols)
 }
 
 function getMyEntity() {
@@ -67,6 +99,10 @@ function getMyEntity() {
 		const me = room.players[playerId]
 		if (!me || !me.groupId) return null
 		return room.groups[me.groupId]
+	}
+	if (room.mode === 'tournament') {
+		const matches = (room.bracket && room.bracket.matches) || {}
+		return Object.values(matches).find((m) => m.memberIds.includes(playerId)) || null
 	}
 	return room.boards[playerId]
 }
@@ -137,6 +173,10 @@ function renderFromRoom() {
 		renderWaitPanel()
 		return
 	}
+	if (room.mode === 'tournament') {
+		renderTournamentState()
+		return
+	}
 	const entity = getMyEntity()
 	if (!entity) return
 	if (entity.finishedAt) {
@@ -153,6 +193,91 @@ function renderFromRoom() {
 		renderPlay(entity)
 		if (!timerInt) timerInt = setInterval(tick, 1000)
 	}
+}
+
+function renderTournamentState() {
+	const entity = getMyEntity()
+	const bracket = room.bracket || {}
+	const iAmEliminated = bracket.eliminated && bracket.eliminated[playerId]
+	if (!entity) {
+		clearInterval(timerInt)
+		timerInt = null
+		$('#waitPanel').hidden = true
+		$('#playPanel').hidden = true
+		$('#resultPanel').hidden = false
+		renderTournamentResult(iAmEliminated ? 'eliminated' : 'unknown', iAmEliminated ? iAmEliminated.round : null)
+		return
+	}
+	if (entity.finishedAt) {
+		clearInterval(timerInt)
+		timerInt = null
+		if (entity.winnerId == null) {
+			$('#waitPanel').hidden = false
+			$('#playPanel').hidden = true
+			$('#resultPanel').hidden = true
+			$('#waitName').textContent = room.players[playerId]?.name || ''
+			$('#waitGroupInfo').hidden = false
+			$('#waitGroupInfo').innerHTML = 'Sedang menghitung hasil pertandingan...'
+			return
+		}
+		if (entity.winnerId === playerId) {
+			if (bracket.championId === playerId) {
+				$('#waitPanel').hidden = true
+				$('#playPanel').hidden = true
+				$('#resultPanel').hidden = false
+				renderTournamentResult('champion')
+			} else {
+				$('#waitPanel').hidden = false
+				$('#playPanel').hidden = true
+				$('#resultPanel').hidden = true
+				$('#waitName').textContent = room.players[playerId]?.name || ''
+				$('#waitGroupInfo').hidden = false
+				$('#waitGroupInfo').innerHTML = `Kamu menang babak ${entity.round}! Menunggu babak selanjutnya dimulai oleh admin...`
+			}
+			return
+		}
+		$('#waitPanel').hidden = true
+		$('#playPanel').hidden = true
+		$('#resultPanel').hidden = false
+		renderTournamentResult('eliminated', entity.round)
+		return
+	}
+	$('#waitPanel').hidden = true
+	$('#resultPanel').hidden = true
+	$('#playPanel').hidden = false
+	$('#playTitle').textContent = room.title
+	renderPlay(entity)
+	if (!timerInt) timerInt = setInterval(tick, 1000)
+}
+
+function renderTournamentResult(kind, round) {
+	const board = GameLogic.tournamentStandings(room)
+	const listHtml = board
+		.map(
+			(row) =>
+				`<div class="score-row${row.isChampion ? ' winner' : ''}"><span>${esc(row.name)}${row.isChampion ? ' \uD83C\uDFC6' : ''}</span><strong>${row.isChampion ? 'Juara' : row.eliminatedRound ? `Tersingkir babak ${row.eliminatedRound}` : 'Masih bermain'}</strong></div>`
+		)
+		.join('')
+	if (kind === 'champion') {
+		$('#resultIcon').textContent = '\uD83C\uDFC6'
+		$('#resultIcon').style.background = '#e8f2ec'
+		$('#resultIcon').style.color = 'var(--green)'
+		$('#resultTitle').textContent = 'Kamu Juara Turnamen!'
+		$('#resultText').textContent = 'Selamat, kamu memenangkan semua babak.'
+	} else if (kind === 'eliminated') {
+		$('#resultIcon').textContent = '!'
+		$('#resultIcon').style.background = '#fce9e7'
+		$('#resultIcon').style.color = 'var(--red)'
+		$('#resultTitle').textContent = round ? `Tersingkir di babak ${round}` : 'Tersingkir'
+		$('#resultText').textContent = 'Terima kasih sudah bermain, lihat hasil akhir turnamen di bawah.'
+	} else {
+		$('#resultIcon').textContent = '\u2139'
+		$('#resultIcon').style.background = '#eef1f6'
+		$('#resultIcon').style.color = '#5b6472'
+		$('#resultTitle').textContent = 'Turnamen berjalan'
+		$('#resultText').textContent = 'Menunggu update status kamu...'
+	}
+	$('#resultScores').innerHTML = listHtml
 }
 
 function renderWaitPanel() {
@@ -200,14 +325,15 @@ function renderStats(entity) {
 	$('#moves').textContent = entity.moves || 0
 	$('#matched').textContent = (entity.matchedIds || []).length / 2
 	$('#progressBar').style.width = `${((entity.matchedIds || []).length / entity.deck.length) * 100}%`
-	if (room.mode === 'group') {
+	if (room.mode === 'group' || room.mode === 'tournament') {
 		$('#turnIndicator').hidden = false
 		const turnId = entity.memberIds[entity.turnIndex % entity.memberIds.length]
 		$('#turnName').textContent = turnId === playerId ? `${room.players[turnId]?.name || '?'} (kamu)` : room.players[turnId]?.name || '?'
 	} else {
 		$('#turnIndicator').hidden = true
 	}
-	const remaining = room.startedAt ? Math.max(0, room.duration - Math.floor((Date.now() - room.startedAt) / 1000)) : room.duration
+	const baseStart = room.mode === 'tournament' ? entity.startedAt || room.startedAt : room.startedAt
+	const remaining = baseStart ? Math.max(0, room.duration - Math.floor((Date.now() - baseStart) / 1000)) : room.duration
 	$('#timer').textContent = fmt(remaining)
 }
 
@@ -215,7 +341,7 @@ async function onCardClick(e) {
 	const idx = +e.currentTarget.dataset.card
 	const entity = getMyEntity()
 	if (!entity || entity.finishedAt) return
-	if (room.mode === 'group') {
+	if (room.mode === 'group' || room.mode === 'tournament') {
 		const turnId = entity.memberIds[entity.turnIndex % entity.memberIds.length]
 		if (turnId !== playerId) {
 			toast('Bukan giliranmu.')
@@ -237,7 +363,8 @@ async function tick() {
 	if (!room || !room.startedAt) return
 	const entity = getMyEntity()
 	if (!entity) return
-	const remaining = Math.max(0, room.duration - Math.floor((Date.now() - room.startedAt) / 1000))
+	const baseStart = room.mode === 'tournament' ? entity.startedAt || room.startedAt : room.startedAt
+	const remaining = Math.max(0, room.duration - Math.floor((Date.now() - baseStart) / 1000))
 	if ($('#timer')) $('#timer').textContent = fmt(remaining)
 	if (remaining <= 0 && !entity.finishedAt) {
 		const updated = await Store.updateRoom(roomCode, (rm) => {
@@ -263,10 +390,12 @@ function renderResult() {
 	$('#resultText').textContent = `Kamu menemukan ${matched} dari ${total} pasangan dalam ${entity.moves || 0} langkah.`
 	const board = GameLogic.leaderboard(room)
 	$('#resultScores').innerHTML = board
-		.map(
-			(row, i) =>
-				`<div class="score-row${i === 0 ? ' winner' : ''}"><span>${esc(row.name)}${row.members ? ` <span class="muted">(${row.members.map(esc).join(', ')})</span>` : ''}</span><strong>${row.matchedCount}/${row.total} pasangan</strong></div>`
-		)
+		.map((row, i) => {
+			const winnerLine = row.topScorers && row.topScorers.length
+				? `<div class="muted" style="font-size:12px;margin-top:2px">\uD83C\uDFC6 Juara grup: <strong>${row.topScorers.map((s) => esc(s.name)).join(' &amp; ')}</strong> (${row.topScorers[0].score} poin)</div>`
+				: ''
+			return `<div class="score-row${i === 0 ? ' winner' : ''}"><span>${esc(row.name)}${row.members ? ` <span class="muted">(${row.members.map(esc).join(', ')})</span>` : ''}${winnerLine}</span><strong>${row.matchedCount}/${row.total} pasangan</strong></div>`
+		})
 		.join('')
 }
 

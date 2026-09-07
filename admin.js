@@ -136,6 +136,8 @@ let mode = 'individual'
 let room = null
 let unsub = null
 let timerInt = null
+let tournamentPairs = []
+let pairingSelected = null
 
 function renderPairs() {
 	$('#pairList').innerHTML = pairs
@@ -170,8 +172,93 @@ $$('input[name="mode"]').forEach((r) =>
 		mode = e.target.value
 		$$('.radio-chip').forEach((chip) => chip.classList.toggle('checked', chip.querySelector('input').checked))
 		$('#groupSizeWrap').hidden = mode !== 'group'
+		$('#tournamentHint').hidden = mode !== 'tournament'
 	})
 )
+
+function shuffleArr(arr) {
+	const a = [...arr]
+	for (let i = a.length - 1; i > 0; i--) {
+		const j = Math.floor(Math.random() * (i + 1))
+		;[a[i], a[j]] = [a[j], a[i]]
+	}
+	return a
+}
+
+function unpairedIds(r) {
+	const pairedIds = new Set(tournamentPairs.flat())
+	return Object.keys(r.players).filter((id) => !pairedIds.has(id))
+}
+
+function updateStartButtonState() {
+	if (!room) return
+	const totalPlayers = Object.keys(room.players).length
+	if (room.mode === 'tournament') {
+		$('#startRoomBtn').disabled = totalPlayers < 2 || unpairedIds(room).length > 0
+	} else {
+		$('#startRoomBtn').disabled = totalPlayers === 0
+	}
+}
+
+function renderPairingUI(r) {
+	$('#pairingPanel').hidden = r.mode !== 'tournament'
+	if (r.mode !== 'tournament') return
+	const pool = unpairedIds(r)
+	$('#pairingPool').innerHTML = pool.length
+		? pool
+				.map(
+					(id) =>
+						`<button type="button" class="pairing-chip${pairingSelected === id ? ' selected' : ''}" data-pair-pick="${id}">${esc(r.players[id]?.name || '?')}</button>`
+				)
+				.join('')
+		: '<p class="muted">Semua pemain sudah berpasangan.</p>'
+	$('#pairingList').innerHTML = tournamentPairs.length
+		? tournamentPairs
+				.map(
+					(pair, i) =>
+						`<div class="pairing-row"><span>${pair.map((id) => esc(r.players[id]?.name || '?')).join(' vs ')}${pair.length === 1 ? ' <span class="muted">(bye, menang otomatis)</span>' : ''}</span><button type="button" class="remove-pair" data-unpair="${i}">&times;</button></div>`
+				)
+				.join('')
+		: '<p class="muted">Belum ada pasangan.</p>'
+	$$('[data-pair-pick]').forEach((btn) =>
+		btn.addEventListener('click', () => {
+			const id = btn.dataset.pairPick
+			if (pairingSelected === null) pairingSelected = id
+			else if (pairingSelected === id) pairingSelected = null
+			else {
+				tournamentPairs.push([pairingSelected, id])
+				pairingSelected = null
+			}
+			renderPairingUI(room)
+			updateStartButtonState()
+		})
+	)
+	$$('[data-unpair]').forEach((btn) =>
+		btn.addEventListener('click', () => {
+			tournamentPairs.splice(+btn.dataset.unpair, 1)
+			renderPairingUI(room)
+			updateStartButtonState()
+		})
+	)
+}
+
+$('#autoPairBtn').addEventListener('click', () => {
+	if (!room) return
+	const pool = shuffleArr(unpairedIds(room))
+	for (let i = 0; i < pool.length; i += 2) {
+		if (i + 1 < pool.length) tournamentPairs.push([pool[i], pool[i + 1]])
+		else tournamentPairs.push([pool[i]])
+	}
+	pairingSelected = null
+	renderPairingUI(room)
+	updateStartButtonState()
+})
+$('#clearPairsBtn').addEventListener('click', () => {
+	tournamentPairs = []
+	pairingSelected = null
+	renderPairingUI(room)
+	updateStartButtonState()
+})
 
 function playerLinkFor(code) {
 	return new URL(`player.html?code=${code}`, location.href).toString()
@@ -222,7 +309,8 @@ function showLobby(r) {
 		$('#backendNote').hidden = true
 	}
 	renderLobbyPlayerList(r)
-	$('#startRoomBtn').disabled = Object.keys(r.players).length === 0
+	renderPairingUI(r)
+	updateStartButtonState()
 }
 
 function renderLobbyPlayerList(r) {
@@ -243,6 +331,21 @@ function renderLobbyPlayerList(r) {
 }
 
 $('#startRoomBtn').addEventListener('click', async () => {
+	if (room.mode === 'tournament') {
+		if (Object.keys(room.players).length < 2) return toast('Minimal 2 pemain untuk mode turnamen.')
+		if (unpairedIds(room).length > 0) return toast('Pasangkan semua pemain dulu (atau pakai tombol Acak sisanya).')
+		const pairsSnapshot = tournamentPairs.map((p) => [...p])
+		const updated = await Store.updateRoom(room.code, (rm) => {
+			if (rm.status !== 'lobby') return rm
+			return GameLogic.startTournament(rm, pairsSnapshot)
+		})
+		if (updated) {
+			room = updated
+			showMonitor(room)
+			startMonitorTimer()
+		}
+		return
+	}
 	const updated = await Store.updateRoom(room.code, (rm) => {
 		if (Object.keys(rm.players).length === 0 || rm.status !== 'lobby') return rm
 		return GameLogic.startRoom(rm)
@@ -261,6 +364,8 @@ function resetToSetup() {
 	clearInterval(timerInt)
 	if (unsub) unsub()
 	room = null
+	tournamentPairs = []
+	pairingSelected = null
 	$('#monitorPanel').hidden = true
 	$('#lobbyPanel').hidden = true
 	$('#setupPanel').hidden = false
@@ -282,6 +387,13 @@ function showMonitor(r) {
 function renderMonitor(r) {
 	const remaining = r.startedAt ? Math.max(0, r.duration - Math.floor((Date.now() - r.startedAt) / 1000)) : r.duration
 	$('#monitorTimer').textContent = fmt(remaining)
+	if (r.mode === 'tournament') {
+		renderTournamentMonitor(r)
+		return
+	}
+	$('#bracketRoundLabel').hidden = true
+	$('#tournamentSummary').hidden = true
+	$('#leaderboardSection').hidden = false
 	const entities = r.mode === 'group' ? Object.values(r.groups) : Object.values(r.boards)
 	$('#monitorGrid').innerHTML = entities
 		.map((e) => {
@@ -305,12 +417,77 @@ function renderMonitor(r) {
 	maybeFinalize(r, entities, remaining)
 }
 
+function renderTournamentMonitor(r) {
+	const matches = Object.values(r.bracket?.matches || {})
+	const championId = r.bracket?.championId
+	$('#bracketRoundLabel').hidden = false
+	$('#bracketRoundLabel').textContent = championId
+		? `Turnamen selesai.`
+		: `Babak ${r.bracket?.round || 1} sedang berlangsung (${matches.filter((m) => m.finishedAt).length}/${matches.length} pertandingan selesai).`
+	$('#monitorGrid').innerHTML = matches
+		.map((m) => {
+			if (m.isBye) {
+				return `<div class="monitor-card done"><h4>${esc(r.players[m.memberIds[0]]?.name || '?')}</h4><p><em>Bye, menang otomatis babak ini</em></p><span class="done-badge">Lanjut</span></div>`
+			}
+			const [a, b] = m.memberIds
+			const total = m.deck.length / 2
+			const matched = (m.matchedIds || []).length / 2
+			const turnName = esc(r.players[m.memberIds[m.turnIndex % m.memberIds.length]]?.name || '?')
+			const scoreLine = `${esc(r.players[a]?.name || '?')} <strong>${m.scores[a] || 0}</strong> &ndash; <strong>${m.scores[b] || 0}</strong> ${esc(r.players[b]?.name || '?')}`
+			return `<div class="monitor-card ${m.finishedAt ? 'done' : ''}">
+		<h4>${scoreLine}</h4>
+		<p>Cocok: <strong>${matched}/${total}</strong> &middot; Langkah: <strong>${m.moves || 0}</strong></p>
+		${!m.finishedAt ? `<p>Giliran: <strong>${turnName}</strong></p>` : ''}
+		${m.finishedAt ? `<span class="done-badge">Menang: ${esc(r.players[m.winnerId]?.name || '?')}</span>` : ''}
+		</div>`
+		})
+		.join('')
+	if (championId) {
+		$('#tournamentSummary').hidden = false
+		$('#tournamentSummary').innerHTML = `<div class="champion-banner">\uD83C\uDFC6 Juara Turnamen: <strong>${esc(r.players[championId]?.name || '?')}</strong></div>`
+	} else {
+		$('#tournamentSummary').hidden = true
+	}
+	$('#leaderboardSection').hidden = false
+	const standings = GameLogic.tournamentStandings(r)
+	$('#leaderboardBody').innerHTML = standings
+		.map(
+			(row, i) =>
+				`<tr><td>${i + 1}</td><td>${esc(row.name)}${row.isChampion ? ' \uD83C\uDFC6' : ''}</td><td colspan="2">${row.isChampion ? 'Juara' : row.eliminatedRound ? `Tersingkir babak ${row.eliminatedRound}` : 'Masih bermain'}</td><td>${row.isChampion || row.eliminatedRound ? 'Selesai' : 'Berjalan'}</td></tr>`
+		)
+		.join('')
+	tournamentTick(r)
+}
+
+let tournamentTicking = false
+async function tournamentTick(r) {
+	if (tournamentTicking || r.bracket?.championId) return
+	tournamentTicking = true
+	try {
+		const updated = await Store.updateRoom(r.code, (rm) => {
+			if (rm.mode !== 'tournament' || !rm.bracket) return rm
+			Object.keys(rm.bracket.matches).forEach((mid) => GameLogic.forceFinishIfExpired(rm, mid))
+			GameLogic.maybeAdvanceTournamentRound(rm)
+			return rm
+		})
+		if (updated) room = updated
+	} finally {
+		tournamentTicking = false
+	}
+}
+
+function groupWinnerLabel(row) {
+	if (!row.topScorers || !row.topScorers.length) return ''
+	const names = row.topScorers.map((s) => esc(s.name)).join(' &amp; ')
+	return `<br><span class="muted">\uD83C\uDFC6 Juara grup: <strong>${names}</strong> (${row.topScorers[0].score} poin)</span>`
+}
+
 function renderLeaderboard(r) {
 	const board = GameLogic.leaderboard(r)
 	$('#leaderboardBody').innerHTML = board
 		.map(
 			(row, i) =>
-				`<tr><td>${i + 1}</td><td>${esc(row.name)}${row.members ? ` <span class="muted">(${row.members.map(esc).join(', ')})</span>` : ''}</td><td>${row.matchedCount}/${row.total}</td><td>${row.moves}</td><td>${row.finished ? 'Selesai' : 'Berjalan'}</td></tr>`
+				`<tr><td>${i + 1}</td><td>${esc(row.name)}${row.members ? ` <span class="muted">(${row.members.map(esc).join(', ')})</span>` : ''}${groupWinnerLabel(row)}</td><td>${row.matchedCount}/${row.total}</td><td>${row.moves}</td><td>${row.finished ? 'Selesai' : 'Berjalan'}</td></tr>`
 		)
 		.join('')
 }
@@ -344,6 +521,13 @@ async function maybeFinalize(r, entities, remaining) {
 
 $('#endNowBtn').addEventListener('click', async () => {
 	const updated = await Store.updateRoom(room.code, (rm) => {
+		if (rm.mode === 'tournament') {
+			Object.values(rm.bracket?.matches || {}).forEach((m) => {
+				if (!m.finishedAt) m.finishedAt = Date.now()
+			})
+			GameLogic.maybeAdvanceTournamentRound(rm)
+			return rm
+		}
 		const entities = rm.mode === 'group' ? Object.values(rm.groups) : Object.values(rm.boards)
 		entities.forEach((e) => {
 			if (!e.finishedAt) e.finishedAt = Date.now()

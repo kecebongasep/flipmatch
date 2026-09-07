@@ -30,8 +30,10 @@
       <div class="radio-group" id="modeGroup">
         <label class="radio-chip checked"><input type="radio" name="mode" value="individual" checked> Mandiri (tiap orang main sendiri)</label>
         <label class="radio-chip"><input type="radio" name="mode" value="group"> Grup (bergiliran satu papan)</label>
+        <label class="radio-chip"><input type="radio" name="mode" value="tournament"> Turnamen (gugur, 2 orang/babak)</label>
       </div>
     </label>
+    <p id="tournamentHint" class="hint" hidden>Di mode turnamen, pemain akan dipasangkan 2 lawan 2. Yang menang lanjut ke babak berikutnya sampai tersisa 1 juara. Pasangan babak pertama diatur manual oleh admin di halaman lobby (bisa juga diacak otomatis).</p>
 
     <div class="field-row" id="groupSizeWrap" hidden>
       <label>Jumlah orang per grup
@@ -70,6 +72,18 @@
     <p id="backendNote" class="backend-note" hidden></p>
     <h3 style="font-size:15px;margin:20px 0 10px">Pemain bergabung</h3>
     <div class="lobby-list" id="lobbyPlayers"><p class="muted">Belum ada pemain.</p></div>
+
+    <div id="pairingPanel" hidden>
+      <h3 style="font-size:15px;margin:20px 0 10px">Atur pasangan babak 1</h3>
+      <p class="hint">Klik dua pemain di kolom "Belum berpasangan" untuk memasangkannya, atau pakai tombol acak untuk sisanya.</p>
+      <div class="pairing-pool" id="pairingPool"></div>
+      <div class="pairing-actions">
+        <button id="autoPairBtn" class="btn secondary" type="button">Acak sisanya</button>
+        <button id="clearPairsBtn" class="btn ghost" type="button">Reset pasangan</button>
+      </div>
+      <div class="pairing-list" id="pairingList"></div>
+    </div>
+
     <div class="actions">
       <button id="cancelRoomBtn" class="btn ghost" type="button">Batalkan</button>
       <button id="startRoomBtn" class="btn primary large" type="button" disabled>Mulai Permainan</button>
@@ -81,12 +95,16 @@
       <h2 style="margin:0">Permainan berlangsung</h2>
       <div class="monitor-timer" id="monitorTimer">00:00</div>
     </div>
+    <p id="bracketRoundLabel" class="hint" hidden></p>
     <div class="monitor-grid" id="monitorGrid"></div>
-    <h3 style="font-size:15px;margin:20px 0 10px">Klasemen</h3>
-    <table class="leaderboard">
-      <thead><tr><th>#</th><th>Nama</th><th>Cocok</th><th>Langkah</th><th>Status</th></tr></thead>
-      <tbody id="leaderboardBody"></tbody>
-    </table>
+    <div id="tournamentSummary" hidden></div>
+    <div id="leaderboardSection">
+      <h3 style="font-size:15px;margin:20px 0 10px">Klasemen</h3>
+      <table class="leaderboard">
+        <thead><tr><th>#</th><th>Nama</th><th>Cocok</th><th>Langkah</th><th>Status</th></tr></thead>
+        <tbody id="leaderboardBody"></tbody>
+      </table>
+    </div>
     <div class="actions">
       <button id="endNowBtn" class="btn secondary" type="button">Akhiri sekarang</button>
       <button id="newRoomBtn" class="btn primary large" type="button">Buat Room Baru</button>
