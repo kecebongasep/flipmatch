@@ -266,8 +266,9 @@ input:focus {
   transition: 0.15s;
 }
 .radio-chip input {
-  width: auto;
-  height: auto;
+  /* width: auto;
+  height: auto; */
+  display: none;
 }
 .radio-chip.checked {
   border-color: transparent;
