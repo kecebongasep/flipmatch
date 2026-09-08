@@ -1,72 +1,115 @@
 <!doctype html>
 <html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FlipMatch Online — Pemain</title>
-<link rel="stylesheet" href="shared/styles.css">
-</head>
-<body>
-<header class="page-header">
-  <div class="brand"><span class="brand-mark">F</span> FlipMatch Online</div>
-  <span class="tag">Pemain</span>
-</header>
-<main class="container">
-
-  <section id="joinPanel" class="join-form">
-    <h1 style="font-size:28px;margin-bottom:6px">Gabung Permainan</h1>
-    <p class="lead" style="margin-bottom:24px">Masukkan kode room dari admin dan nama kamu.</p>
-    <form id="joinForm">
-      <label style="margin-bottom:14px">Kode room
-        <input id="codeInput" maxlength="6" placeholder="Contoh: AB12C" autocapitalize="characters" style="text-transform:uppercase">
-      </label>
-      <label style="margin-bottom:18px">Nama kamu
-        <input id="nameInput" maxlength="24" placeholder="Nama panggilan">
-      </label>
-      <button class="btn primary large" type="submit" style="width:100%">Gabung</button>
-    </form>
-    <p id="joinError" class="inline-error" hidden></p>
-  </section>
-
-  <section id="waitPanel" class="card-section wait-box" hidden>
-    <div class="spinner"></div>
-    <h2 style="margin:0 0 8px">Menunggu admin memulai permainan…</h2>
-    <p class="muted">Halo, <strong id="waitName"></strong>! Tetap di halaman ini.</p>
-    <p id="waitGroupInfo" class="muted" style="margin-top:12px" hidden></p>
-  </section>
-
-  <section id="playPanel" class="card-section" hidden>
-    <div id="turnIndicator" class="turn-indicator" hidden>Giliran: <span id="turnName"></span></div>
-    <div class="game-header">
-      <h1 id="playTitle" style="font-size:26px">FlipMatch</h1>
-      <div class="stats">
-        <div class="stat"><span>Waktu</span><strong id="timer">00:00</strong></div>
-        <div class="stat"><span>Langkah</span><strong id="moves">0</strong></div>
-        <div class="stat"><span>Cocok</span><strong><span id="matched">0</span>/<span id="matchTarget">0</span></strong></div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FlipMatch Online — Pemain</title>
+    <link rel="stylesheet" href="shared/styles.css?v=20260908" />
+  </head>
+  <body>
+    <header class="page-header">
+      <div class="brand">
+        <span class="brand-mark">F</span> FlipMatch Online
       </div>
-    </div>
-    <div class="progress"><span id="progressBar"></span></div>
-    <div id="cardGrid" class="card-grid"></div>
-  </section>
+      <span class="tag">Pemain</span>
+    </header>
+    <main class="container">
+      <section id="joinPanel" class="join-form">
+        <h1 style="font-size: 28px; margin-bottom: 6px">Gabung Permainan</h1>
+        <p class="lead" style="margin-bottom: 24px">
+          Masukkan kode room dari admin dan nama kamu.
+        </p>
+        <form id="joinForm">
+          <label style="margin-bottom: 14px"
+            >Kode room
+            <input
+              id="codeInput"
+              maxlength="6"
+              placeholder="Contoh: AB12C"
+              autocapitalize="characters"
+              style="text-transform: uppercase"
+            />
+          </label>
+          <label style="margin-bottom: 18px"
+            >Nama kamu
+            <input id="nameInput" maxlength="24" placeholder="Nama panggilan" />
+          </label>
+          <button class="btn primary large" type="submit" style="width: 100%">
+            Gabung
+          </button>
+        </form>
+        <p id="joinError" class="inline-error" hidden></p>
+      </section>
 
-  <section id="resultPanel" class="card-section" hidden>
-    <div id="resultIcon" class="result-icon" style="width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-size:26px;margin-bottom:12px">✓</div>
-    <h2 id="resultTitle">Selesai!</h2>
-    <p id="resultText" class="muted"></p>
-    <h3 style="font-size:15px;margin:20px 0 10px">Klasemen akhir</h3>
-    <div class="result-scores-online" id="resultScores"></div>
-    <div class="actions">
-      <button id="playAgainBtn" class="btn primary large" type="button">Kembali / Gabung Room Lain</button>
-    </div>
-  </section>
+      <section id="waitPanel" class="card-section wait-box" hidden>
+        <div class="spinner"></div>
+        <h2 style="margin: 0 0 8px">Menunggu admin memulai permainan…</h2>
+        <p class="muted">
+          Halo, <strong id="waitName"></strong>! Tetap di halaman ini.
+        </p>
+        <p id="waitGroupInfo" class="muted" style="margin-top: 12px" hidden></p>
+      </section>
 
-</main>
-<div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="firebase-config.js"></script>
-<script src="shared/game-logic.js"></script>
-<script src="shared/store-local.js"></script>
-<script src="shared/store-firebase.js"></script>
-<script src="shared/store.js"></script>
-<script src="player.js"></script>
-</body>
+      <section id="playPanel" class="card-section" hidden>
+        <div id="turnIndicator" class="turn-indicator" hidden>
+          Giliran: <span id="turnName"></span>
+        </div>
+        <div class="game-header">
+          <h1 id="playTitle" style="font-size: 26px">FlipMatch</h1>
+          <div class="stats">
+            <div class="stat">
+              <span>Waktu</span><strong id="timer">00:00</strong>
+            </div>
+            <div class="stat">
+              <span>Langkah</span><strong id="moves">0</strong>
+            </div>
+            <div class="stat">
+              <span>Cocok</span>
+              <strong>
+                <span id="matched">0</span>
+                /
+                <span id="matchTarget">18</span>
+              </strong>
+            </div>
+          </div>
+        </div>
+        <div class="progress"><span id="progressBar"></span></div>
+        <div id="cardGrid" class="card-grid"></div>
+      </section>
+
+      <section id="resultPanel" class="card-section" hidden>
+        <div
+          id="resultIcon"
+          class="result-icon"
+          style="
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            font-size: 26px;
+            margin-bottom: 12px;
+          "
+        >
+          ✓
+        </div>
+        <h2 id="resultTitle">Selesai!</h2>
+        <p id="resultText" class="muted"></p>
+        <h3 style="font-size: 15px; margin: 20px 0 10px">Klasemen akhir</h3>
+        <div class="result-scores-online" id="resultScores"></div>
+        <div class="actions">
+          <button id="playAgainBtn" class="btn primary large" type="button">
+            Kembali / Gabung Room Lain
+          </button>
+        </div>
+      </section>
+    </main>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="firebase-config.js?v=20260908"></script>
+    <script src="shared/game-logic.js?v=20260908"></script>
+    <script src="shared/store-local.js?v=20260908"></script>
+    <script src="shared/store-firebase.js?v=20260908"></script>
+    <script src="shared/store.js?v=20260908"></script>
+    <script src="player.js?v=20260908"></script>
+  </body>
 </html>
